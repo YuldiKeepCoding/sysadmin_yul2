@@ -1,0 +1,50 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  config.vm.define "vm1" do |vm1|
+    vm1.vm.box = "ubuntu/jammy64"
+    vm1.vm.box_check_update = false
+    vm1.vm.hostname = "vm1"
+    vm1.vm.network "private_network", ip: "192.168.10.2", nic_type: "virtio", virtualbox__intnet: "yulnet"
+    vm1.vm.network "forwarded_port", guest: 80, host: 8081
+    vm1.vm.provider "virtualbox" do |vb|
+      vb.name = "vm1"
+      vb.memory = "1024"
+      vb.cpus = "1"
+      file_to_disk = "extdisk1.vmdk"
+      unless File.exist?(file_to_disk)
+          vb.customize [ "createmedium", "disk", "--filename", "extdisk1.vmdk", "--format", "vmdk", "--size", 1024 * 2 ]
+      end
+      vb.customize [ "storageattach", "vm1" , "--storagectl", "SCSI", "--port", "2", "--device", "0", "--type", "hdd", "--medium", file_to_disk]
+      vb.default_nic_type = "virtio"
+    end
+    vm1.vm.provision "shell", path: "provision_wp.sh"
+  end
+end
+Vagrant.configure("2") do |config|
+  config.vm.define "vm2" do |vm2|
+    vm2.vm.box = "ubuntu/jammy64"
+    vm2.vm.box_check_update = false
+    vm2.vm.hostname = "vm2"
+    vm2.vm.network "private_network", ip: "192.168.10.4", nic_type: "virtio", virtualbox__intnet: "yulnet"
+    vm2.vm.network "forwarded_port", guest: 9200, host: 9200
+    vm2.vm.network "forwarded_port", guest: 5601, host: 5601
+    vm2.vm.provider "virtualbox" do |vb|
+      vb.name = "vm2"
+      vb.memory = "4096"
+      vb.cpus = "2"
+      file_to_disk = "extdisk2.vmdk"
+      unless File.exist?(file_to_disk)
+          vb.customize [ "createmedium", "disk", "--filename", "extdisk2.vmdk", "--format", "vmdk", "--size", 1024 * 2 ]
+      end
+      vb.customize [ "storageattach", "vm2" , "--storagectl", "SCSI", "--port", "3", "--device", "0", "--type", "hdd", "--medium", file_to_disk]
+      vb.default_nic_type = "virtio"
+    end
+  vm2.vm.provision "shell", path: "provision_elk.sh"
+  end
+end
